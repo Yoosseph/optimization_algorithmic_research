@@ -1,0 +1,44 @@
+1) ACO base utilities (shared by CVRP and VRPTW)
+
+Distance matrix: build_distance_matrix() builds an 
+n
+×
+n
+n×n Euclidean distance matrix from the depot and customer coordinates. This is the foundation for all route costs and heuristics.
+Pheromone mechanics: init_pheromone_matrix(), evaporate_pheromones(), and deposit_pheromones() implement the standard ACO update rules (global evaporation + reinforcement proportional to solution quality).
+CVRP route construction: construct_solution_cvrp() builds routes by repeatedly selecting feasible customers until capacity is full; select_next_cvrp() does the roulette-wheel choice using $\\tau^\\alpha \\cdot \\eta^\\beta$ (pheromone and inverse distance).
+Cost: compute_cost() sums the route edge distances.
+Note: there is another compute_cost() in the GRASP section; it has identical logic, so later execution redefines it but does not change behavior.
+2) CVRP ACO solver
+
+Parser: parse_cvrp_input() reads cvrp.txt into a dict with depot, customers, and capacity.
+Solver: solve_aco_cvrp() loops over iterations and ants, keeps the best solution, updates pheromones, and (optionally) returns a best-cost history for plotting.
+Main block: Prints the final best cost and routes.
+3) GRASP framework (shared by CVRP and VRPTW)
+
+Construction phase: greedy_randomised_construction() builds routes with a Restricted Candidate List (RCL) using a score function and a feasibility function.
+Local search: two_opt() improves each route; local_search() applies it to all routes.
+Main GRASP loop: grasp() repeats construction + local search, tracks best cost per iteration, and optionally returns the history.
+4) CVRP GRASP specialization
+
+Feasibility and scoring: cvrp_feasibility_fn() checks capacity; cvrp_score_fn() uses distance only.
+State update: cvrp_update_state() only tracks load.
+Solver wrapper: solve_grasp_cvrp() injects CVRP-specific functions into the generic GRASP loop and optionally returns history.
+5) VRPTW ACO solver
+
+Parser: parse_vrptw_input() reads vrptw.txt into a dict including time window data and fleet size.
+Feasibility: is_feasible_vrptw() checks both capacity and that arrival is before the close time.
+Next-node choice: select_next_vrptw() combines pheromone, inverse distance, and slack urgency: $\\tau^\\alpha \\cdot (1/\\text{travel})^\\beta \\cdot (1/(\\text{slack}+\\epsilon))^\\gamma$.
+ACO solver: solve_aco_vrptw() runs ants/iterations, applies a fleet-size penalty, and returns history if requested.
+6) VRPTW GRASP specialization
+
+State and update: vrptw_update_state() advances time with travel + waiting + service time, and tracks load.
+Feasibility and scoring: vrptw_feasibility_fn() checks capacity and time-window reachability; vrptw_score_fn() combines distance with slack (urgency).
+2-opt feasibility: route_time_feasible() rejects swaps that violate time windows.
+Solver wrapper: solve_grasp_vrptw() calls grasp() with VRPTW-specific functions and optional history.
+7) Visualization cells
+
+Route plots: plot_routes() draws the depot and each route polyline.
+CVRP visualization: runs ACO + GRASP, plots their routes, then plots performance (best cost vs iteration).
+VRPTW visualization: same structure as CVRP.
+Random seed: random.seed(42) ensures repeatable stochastic results in plots.
